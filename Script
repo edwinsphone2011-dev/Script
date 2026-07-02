@@ -1,12 +1,12 @@
 -- ==================== AUTO RE-EXECUTE AFTER TELEPORT ====================
-local scriptUrl = "https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script"
+local scriptUrl = "https://raw.githubusercontent.com/edwinsphone2011-dev/Script/30939948746a6f19d6f1c0d84cb4e119c7ee8fc9/Script"
 
 if syn and syn.queue_on_teleport then
-    syn.queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script'))()")
+    syn.queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/30939948746a6f19d6f1c0d84cb4e119c7ee8fc9/Script'))()")
 elseif queue_on_teleport then
-    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script'))()")
+    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/30939948746a6f19d6f1c0d84cb4e119c7ee8fc9/Script'))()")
 elseif getexecutorname then
-    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script'))()")
+    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/30939948746a6f19d6f1c0d84cb4e119c7ee8fc9/Script'))()")
 end
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -15,7 +15,7 @@ local Window = Rayfield:CreateWindow({
     Name = "Treasure Hunt Simulator",
     Icon = 0,
     LoadingTitle = "Treasure Hunt Simulator",
-    LoadingSubtitle = "by Grok",
+    LoadingSubtitle = "by Space",
     ShowText = "THS Hub",
     Theme = "Default",
     ToggleUIKeybind = "K",
@@ -89,6 +89,31 @@ local Hop = false
 MainTab:CreateToggle({ Name = "Auto Farm", CurrentValue = Farm, Callback = function(v) Farm = v; saveStates() end })
 MainTab:CreateToggle({ Name = "Auto Rebirth", CurrentValue = Rebirth, Callback = function(v) Rebirth = v; saveStates() end })
 MainTab:CreateToggle({ Name = "Auto Server Hop", CurrentValue = Hop, Callback = function(v) Hop = v; saveStates() end })
+
+-- ⭐ NEW BUTTON ADDED HERE ⭐
+MainTab:CreateButton({
+    Name = "🔄 Manual Server Hop",
+    Callback = function()
+        Rayfield:Notify({Title = "Server Hop", Content = "Searching for new server...", Duration = 3})
+        pcall(function()
+            local PlaceID = game.PlaceId
+            local servers = game:GetService("HttpService"):JSONDecode(
+                game:HttpGet("https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100")
+            )
+
+            for _, v in pairs(servers.data) do
+                if v.playing < v.maxPlayers then
+                    Rayfield:Notify({Title = "Teleporting", Content = "Joining new server...", Duration = 3})
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, v.id, game.Players.LocalPlayer)
+                    return
+                end
+            end
+
+            Rayfield:Notify({Title = "No Servers", Content = "No empty servers found.", Duration = 3})
+        end)
+    end
+})
+-- ⭐ END OF NEW BUTTON ⭐
 
 -- ==================== TELEPORTS TAB ====================
 local TeleportTab = Window:CreateTab("Teleports", 4483362458)
@@ -212,7 +237,8 @@ end
 spawn(function()
     while wait(10) do
         if Hop and Farm and not isHopping and tick() > HopCooldown then
-            if tick() - lastCollectionTime > 30 then
+            -- Hop if no collection for 10 seconds
+            if tick() - lastCollectionTime > 10 then
                 HopCooldown = tick() + 15
                 pcall(TPReturner)
             end
@@ -283,3 +309,4 @@ while true do
         end
     end
 end
+a
