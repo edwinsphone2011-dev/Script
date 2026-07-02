@@ -1,12 +1,12 @@
 -- ==================== AUTO RE-EXECUTE AFTER TELEPORT ====================
-local scriptUrl = "https://raw.githubusercontent.com/edwinsphone2011-dev/Script/main/TBS.lua"  -- ← YOUR LINK
+local scriptUrl = "https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script"
 
 if syn and syn.queue_on_teleport then
-    syn.queue_on_teleport("loadstring(game:HttpGet('" .. scriptUrl .. "'))()")
+    syn.queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script'))()")
 elseif queue_on_teleport then
-    queue_on_teleport("loadstring(game:HttpGet('" .. scriptUrl .. "'))()")
+    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script'))()")
 elseif getexecutorname then
-    queue_on_teleport("loadstring(game:HttpGet('" .. scriptUrl .. "'))()")
+    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/edwinsphone2011-dev/Script/4ba7d03af35d1bcdd2c48d603c5551254d78165a/Script'))()")
 end
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -30,6 +30,7 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Main", 4483362458)
 
 local ToolName = "Bucket"
+
 local ToolInput
 
 pcall(function()
@@ -43,10 +44,7 @@ local function saveStates()
             Farm = Farm or false, 
             Rebirth = Rebirth or false, 
             Hop = Hop or false,
-            ToolName = ToolName,
-            SellX = SellX or 3,
-            SellY = SellY or 10,
-            SellZ = SellZ or -160
+            ToolName = ToolName
         }
         writefile("THS_States.json", game:GetService("HttpService"):JSONEncode(data))
     end)
@@ -124,9 +122,26 @@ pcall(function()
     SellZ = data.SellZ or SellZ
 end)
 
-SellXInput = SellTab:CreateInput({ Name = "Sell Position X", CurrentValue = tostring(SellX), Callback = function(v) SellX = tonumber(v) or 3; saveStates() end })
-SellYInput = SellTab:CreateInput({ Name = "Sell Position Y", CurrentValue = tostring(SellY), Callback = function(v) SellY = tonumber(v) or 10; saveStates() end })
-SellZInput = SellTab:CreateInput({ Name = "Sell Position Z", CurrentValue = tostring(SellZ), Callback = function(v) SellZ = tonumber(v) or -160; saveStates() end })
+SellXInput = SellTab:CreateInput({
+    Name = "Sell Position X",
+    CurrentValue = tostring(SellX),
+    PlaceholderText = "X Coordinate",
+    Callback = function(Value) SellX = tonumber(Value) or 3; saveStates() end
+})
+
+SellYInput = SellTab:CreateInput({
+    Name = "Sell Position Y",
+    CurrentValue = tostring(SellY),
+    PlaceholderText = "Y Coordinate",
+    Callback = function(Value) SellY = tonumber(Value) or 10; saveStates() end
+})
+
+SellZInput = SellTab:CreateInput({
+    Name = "Sell Position Z",
+    CurrentValue = tostring(SellZ),
+    PlaceholderText = "Z Coordinate",
+    Callback = function(Value) SellZ = tonumber(Value) or -160; saveStates() end
+})
 
 SellTab:CreateButton({
     Name = "📍 Get Current Position",
@@ -137,87 +152,74 @@ SellTab:CreateButton({
             SellX = math.round(pos.X)
             SellY = math.round(pos.Y)
             SellZ = math.round(pos.Z)
+            
             SellXInput:Set(tostring(SellX))
             SellYInput:Set(tostring(SellY))
             SellZInput:Set(tostring(SellZ))
-            Rayfield:Notify({Title = "Position Saved", Content = string.format("X:%d Y:%d Z:%d", SellX, SellY, SellZ), Duration = 4})
+            
+            Rayfield:Notify({
+                Title = "Position Saved",
+                Content = string.format("X: %d | Y: %d | Z: %d", SellX, SellY, SellZ),
+                Duration = 4
+            })
             saveStates()
+        else
+            Rayfield:Notify({Title = "Error", Content = "Character not found", Duration = 3})
         end
     end
 })
 
--- ==================== SERVER HOP (Fixed + Your Version) ====================
-local PlaceID = 1345139196
+-- ==================== FARM LOGIC ====================
+local lastCollectionTime = tick()
+local isHopping = false
+local HopCooldown = 0
+local PlaceID = game.PlaceId
 local AllIDs = {}
 local foundAnything = ""
-local actualHour = os.date("!*t").hour
 
 pcall(function()
     AllIDs = game:GetService('HttpService'):JSONDecode(readfile("NotSameServers.json"))
 end)
-
 if #AllIDs == 0 then
-    table.insert(AllIDs, actualHour)
+    table.insert(AllIDs, os.date("!*t").hour)
     writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
 end
 
 local function TPReturner()
-    local Site
-    if foundAnything == "" then
-        Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
-    else
-        Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
-    end
-
-    if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+    if isHopping then return end
+    isHopping = true
+    local Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
+    if Site.nextPageCursor and Site.nextPageCursor ~= "null" then
         foundAnything = Site.nextPageCursor
     end
-
-    local num = 0
     for _, v in pairs(Site.data) do
-        local Possible = true
-        local ID = tostring(v.id)
-        if tonumber(v.maxPlayers) > tonumber(v.playing) then
-            for _, Existing in pairs(AllIDs) do
-                if num ~= 0 then
-                    if ID == tostring(Existing) then
-                        Possible = false
-                    end
-                else
-                    if tonumber(actualHour) ~= tonumber(Existing) then
-                        pcall(function()
-                            delfile("NotSameServers.json")
-                            AllIDs = {}
-                            table.insert(AllIDs, actualHour)
-                        end)
-                    end
-                end
-                num = num + 1
-            end
-            if Possible == true then
+        if tonumber(v.playing) < tonumber(v.maxPlayers) then
+            local ID = tostring(v.id)
+            if not table.find(AllIDs, ID) then
                 table.insert(AllIDs, ID)
-                pcall(function()
-                    writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
-                    game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, ID, game.Players.LocalPlayer)
-                end)
+                writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+                Rayfield:Notify({Title = "Server Hop", Content = "Teleporting...", Duration = 4})
+                game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, ID, game.Players.LocalPlayer)
                 wait(4)
+                isHopping = false
+                return
             end
         end
     end
+    isHopping = false
 end
 
 spawn(function()
-    while wait(8) do
-        if Hop and Farm then
+    while wait(10) do
+        if Hop and Farm and not isHopping and tick() > HopCooldown then
             if tick() - lastCollectionTime > 30 then
-                print("[THS] No collection detected → Hopping server...")
+                HopCooldown = tick() + 15
                 pcall(TPReturner)
             end
         end
     end
 end)
 
--- ==================== REBIRTH + FARM ====================
 spawn(function()
     while true do
         wait(1)
@@ -233,9 +235,9 @@ spawn(function()
     end
 end)
 
+-- Main Farm Loop
 local Character = game.Workspace:WaitForChild(game.Players.LocalPlayer.Name)
 local Root = Character:WaitForChild("HumanoidRootPart")
-local lastCollectionTime = tick()
 
 while true do
     wait(0.15)
