@@ -1,0 +1,283 @@
+-- ==================== AUTO RE-EXECUTE AFTER TELEPORT ====================
+local scriptUrl = "https://raw.githubusercontent.com/edwinsphone2011-dev/Script/main/TBS.lua"  -- ← YOUR LINK
+
+if syn and syn.queue_on_teleport then
+    syn.queue_on_teleport("loadstring(game:HttpGet('" .. scriptUrl .. "'))()")
+elseif queue_on_teleport then
+    queue_on_teleport("loadstring(game:HttpGet('" .. scriptUrl .. "'))()")
+elseif getexecutorname then
+    queue_on_teleport("loadstring(game:HttpGet('" .. scriptUrl .. "'))()")
+end
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Treasure Hunt Simulator",
+    Icon = 0,
+    LoadingTitle = "Treasure Hunt Simulator",
+    LoadingSubtitle = "by Grok",
+    ShowText = "THS Hub",
+    Theme = "Default",
+    ToggleUIKeybind = "K",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "THS_Hub",
+        FileName = "THS_Config"
+    }
+})
+
+-- ==================== MAIN TAB ====================
+local MainTab = Window:CreateTab("Main", 4483362458)
+
+local ToolName = "Bucket"
+local ToolInput
+
+pcall(function()
+    local data = game:GetService("HttpService"):JSONDecode(readfile("THS_States.json"))
+    ToolName = data.ToolName or ToolName
+end)
+
+local function saveStates()
+    pcall(function()
+        local data = { 
+            Farm = Farm or false, 
+            Rebirth = Rebirth or false, 
+            Hop = Hop or false,
+            ToolName = ToolName,
+            SellX = SellX or 3,
+            SellY = SellY or 10,
+            SellZ = SellZ or -160
+        }
+        writefile("THS_States.json", game:GetService("HttpService"):JSONEncode(data))
+    end)
+end
+
+ToolInput = MainTab:CreateInput({
+    Name = "Tool Name",
+    CurrentValue = ToolName,
+    PlaceholderText = "Bucket",
+    Callback = function(Value) ToolName = Value; saveStates() end
+})
+
+MainTab:CreateButton({
+    Name = "🔍 Find Current Tool",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        local foundTool = nil
+        if character then
+            for _, obj in pairs(character:GetChildren()) do
+                if obj:IsA("Tool") then foundTool = obj.Name; break end
+            end
+        end
+        if not foundTool then
+            for _, tool in pairs(player.Backpack:GetChildren()) do
+                if tool:IsA("Tool") then foundTool = tool.Name; break end
+            end
+        end
+        if foundTool then
+            ToolName = foundTool
+            ToolInput:Set(foundTool)
+            Rayfield:Notify({Title = "Tool Found", Content = foundTool, Duration = 3})
+            saveStates()
+        end
+    end
+})
+
+local Farm = false
+local Rebirth = false
+local Hop = false
+
+MainTab:CreateToggle({ Name = "Auto Farm", CurrentValue = Farm, Callback = function(v) Farm = v; saveStates() end })
+MainTab:CreateToggle({ Name = "Auto Rebirth", CurrentValue = Rebirth, Callback = function(v) Rebirth = v; saveStates() end })
+MainTab:CreateToggle({ Name = "Auto Server Hop", CurrentValue = Hop, Callback = function(v) Hop = v; saveStates() end })
+
+-- ==================== TELEPORTS TAB ====================
+local TeleportTab = Window:CreateTab("Teleports", 4483362458)
+
+local function TeleportTo(x, y, z, name)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(x, y, z)
+        Rayfield:Notify({Title = "Teleported", Content = name, Duration = 2})
+    end
+end
+
+TeleportTab:CreateButton({ Name = "Dino Island",      Callback = function() TeleportTo(-240, 10, -284, "Dino Island") end })
+TeleportTab:CreateButton({ Name = "Candy Land",      Callback = function() TeleportTo(182, 10, -214, "Candy Land") end })
+TeleportTab:CreateButton({ Name = "Toy Land",        Callback = function() TeleportTo(-157, 10, -909, "Toy Land") end })
+TeleportTab:CreateButton({ Name = "Medieval Island", Callback = function() TeleportTo(521, 10, -937, "Medieval Island") end })
+TeleportTab:CreateButton({ Name = "Volcano Island",  Callback = function() TeleportTo(2198, 10, -256, "Volcano Island") end })
+TeleportTab:CreateButton({ Name = "Prison Island",   Callback = function() TeleportTo(1201, 10, -938, "Prison Island") end })
+TeleportTab:CreateButton({ Name = "Dominus Island",  Callback = function() TeleportTo(1402, 10, -256, "Dominus Island") end })
+
+-- ==================== SELL CONFIGURATION TAB ====================
+local SellTab = Window:CreateTab("Sell Configuration", 4483362458)
+
+local SellX, SellY, SellZ = 3, 10, -160
+local SellXInput, SellYInput, SellZInput
+
+pcall(function()
+    local data = game:GetService("HttpService"):JSONDecode(readfile("THS_States.json"))
+    SellX = data.SellX or SellX
+    SellY = data.SellY or SellY
+    SellZ = data.SellZ or SellZ
+end)
+
+SellXInput = SellTab:CreateInput({ Name = "Sell Position X", CurrentValue = tostring(SellX), Callback = function(v) SellX = tonumber(v) or 3; saveStates() end })
+SellYInput = SellTab:CreateInput({ Name = "Sell Position Y", CurrentValue = tostring(SellY), Callback = function(v) SellY = tonumber(v) or 10; saveStates() end })
+SellZInput = SellTab:CreateInput({ Name = "Sell Position Z", CurrentValue = tostring(SellZ), Callback = function(v) SellZ = tonumber(v) or -160; saveStates() end })
+
+SellTab:CreateButton({
+    Name = "📍 Get Current Position",
+    Callback = function()
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local pos = character.HumanoidRootPart.Position
+            SellX = math.round(pos.X)
+            SellY = math.round(pos.Y)
+            SellZ = math.round(pos.Z)
+            SellXInput:Set(tostring(SellX))
+            SellYInput:Set(tostring(SellY))
+            SellZInput:Set(tostring(SellZ))
+            Rayfield:Notify({Title = "Position Saved", Content = string.format("X:%d Y:%d Z:%d", SellX, SellY, SellZ), Duration = 4})
+            saveStates()
+        end
+    end
+})
+
+-- ==================== SERVER HOP (Fixed + Your Version) ====================
+local PlaceID = 1345139196
+local AllIDs = {}
+local foundAnything = ""
+local actualHour = os.date("!*t").hour
+
+pcall(function()
+    AllIDs = game:GetService('HttpService'):JSONDecode(readfile("NotSameServers.json"))
+end)
+
+if #AllIDs == 0 then
+    table.insert(AllIDs, actualHour)
+    writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+end
+
+local function TPReturner()
+    local Site
+    if foundAnything == "" then
+        Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'))
+    else
+        Site = game.HttpService:JSONDecode(game:HttpGet('https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100&cursor=' .. foundAnything))
+    end
+
+    if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+        foundAnything = Site.nextPageCursor
+    end
+
+    local num = 0
+    for _, v in pairs(Site.data) do
+        local Possible = true
+        local ID = tostring(v.id)
+        if tonumber(v.maxPlayers) > tonumber(v.playing) then
+            for _, Existing in pairs(AllIDs) do
+                if num ~= 0 then
+                    if ID == tostring(Existing) then
+                        Possible = false
+                    end
+                else
+                    if tonumber(actualHour) ~= tonumber(Existing) then
+                        pcall(function()
+                            delfile("NotSameServers.json")
+                            AllIDs = {}
+                            table.insert(AllIDs, actualHour)
+                        end)
+                    end
+                end
+                num = num + 1
+            end
+            if Possible == true then
+                table.insert(AllIDs, ID)
+                pcall(function()
+                    writefile("NotSameServers.json", game:GetService('HttpService'):JSONEncode(AllIDs))
+                    game:GetService("TeleportService"):TeleportToPlaceInstance(PlaceID, ID, game.Players.LocalPlayer)
+                end)
+                wait(4)
+            end
+        end
+    end
+end
+
+spawn(function()
+    while wait(8) do
+        if Hop and Farm then
+            if tick() - lastCollectionTime > 30 then
+                print("[THS] No collection detected → Hopping server...")
+                pcall(TPReturner)
+            end
+        end
+    end
+end)
+
+-- ==================== REBIRTH + FARM ====================
+spawn(function()
+    while true do
+        wait(1)
+        if Rebirth then
+            local a = game.Players.LocalPlayer.PlayerGui.Gui.Buttons.Coins.Amount.Text:gsub(',', '')
+            local b = game.Players.LocalPlayer.PlayerGui.Gui.Rebirth.Needed.Coins.Amount.Text:gsub(',', '')
+            if tonumber(a) and tonumber(b) and tonumber(a) > tonumber(b) then
+                game.ReplicatedStorage.Events.Rebirth:FireServer()
+                ToolName = "Bucket"
+                pcall(function() game.Players.LocalPlayer.PlayerGui.Gui.Popups.GiveReward.Visible = false end)
+            end
+        end
+    end
+end)
+
+local Character = game.Workspace:WaitForChild(game.Players.LocalPlayer.Name)
+local Root = Character:WaitForChild("HumanoidRootPart")
+local lastCollectionTime = tick()
+
+while true do
+    wait(0.15)
+    if Farm then
+        local Sand = nil
+        local SandName = ""
+
+        for _, v in pairs(game.Workspace.SandBlocks:GetChildren()) do
+            if v:FindFirstChild("Chest") and v.CFrame.X > -40 and v.CFrame.X < 20 and v.CFrame.Z < -175 and v.CFrame.Z > -235 then
+                v.CanCollide = false
+                for _, part in pairs(v:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+                Sand = v
+                SandName = v.Name
+                break
+            end
+        end
+
+        if Sand then
+            pcall(function()
+                if game.Players.LocalPlayer.PlayerGui.Gui.Popups.BackpackFull.Visible then
+                    local OldPos = Root.CFrame
+                    Root.CFrame = CFrame.new(SellX, SellY, SellZ)
+                    game.ReplicatedStorage.Events.AreaSell:FireServer()
+                    wait(0.45)
+                    Root.CFrame = OldPos
+                end
+
+                Root.Anchored = true
+                Root.CFrame = Sand.CFrame
+                wait(0.25)
+                Root.Anchored = false
+
+                local tool = Character:FindFirstChild(ToolName) or game.Players.LocalPlayer.Backpack:FindFirstChild(ToolName)
+                if tool then
+                    Character.Humanoid:EquipTool(tool)
+                    tool.RemoteClick:FireServer(game.Workspace.SandBlocks[SandName])
+                end
+
+                lastCollectionTime = tick()
+            end)
+        end
+    end
+end
